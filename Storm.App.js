@@ -6,12 +6,17 @@
 		 */
 	var _apps = [],
 		/** @type {Storm.Events} */
-		_observable = Storm.Events.core.construct(),
+		_observable = Storm.Events.construct(),
 		/**
 		 * Track if the document is ready
 		 * @type {Boolean}
 		 */
-		_isDocReady = false;
+		_isDocReady = false,
+		/**
+		 * Whether all apps are locked
+		 * @type {Boolean}
+		 */
+		_isLocked = false;
 
 	// When document.ready trigger all registered apps to start
 	_document.ready(function() {
@@ -22,6 +27,12 @@
 	_window.on('beforeunload', function() {
 		_observable.trigger('window:unload');
 	});
+
+	var _runChecks = function() {
+		_.each(_apps, function(app) {
+			app._check();
+		});
+	};
 
 	/**
 	 * Centralized start point for an application and 
@@ -65,6 +76,11 @@
 		 */
 		this._hasInitialized = false;
 
+		/**
+		 * @type {Boolean}
+		 */
+		this._isIgnited = false;
+
 		this._initialize = _.once(_.bind(this._initialize, this)); // Initialize only once
 		this._unload = _.once(_.bind(this._unload, this)); // Unload only once
 
@@ -72,6 +88,11 @@
 		this._bindAutoEnd();		
 
 	}, {
+		_check: function() {
+			if (_isLocked) { return; }
+			if (this._isIgnited || _isDocReady) { this._initialize(); }
+		},
+		
 		/**
 		 * By default, the app will startup on document.ready
 		 * @type {Boolean}
@@ -86,10 +107,10 @@
 			if (!this.autoStart) { return; }
 			
 			if (_isDocReady) {
-				return this._initialize();
+				return this._check();
 			}
 
-			_observable.on('document:ready', _.bind(this._initialize, this));
+			_observable.on('document:ready', _.bind(this._check, this));
 		},
 
 		/**
@@ -165,7 +186,8 @@
 		 * @return {App}
 		 */
 		ignite: function() {
-			this._initialize();
+			this._isIgnited = true;
+			this._check();
 			return this;
 		},
 
@@ -248,9 +270,19 @@
 		}
 	});
 
+	App.lock = function() {
+		_isLocked = true;
+	};
+
+	App.unlock = function() {
+		_isLocked = false;
+		_runChecks();
+	};
+
 	Storm.mixin({
 		apps: _apps,
 		app: new App() // A base starting point for the application
+		App: App
 	});
 
 }(Storm, _, $(window), $(document)));
