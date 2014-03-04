@@ -281,7 +281,7 @@
 
 	Storm.mixin({
 		apps: _apps,
-		app: new App() // A base starting point for the application
+		app: new App(), // A base starting point for the application
 		App: App
 	});
 
