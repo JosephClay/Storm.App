@@ -13,10 +13,11 @@
 		 */
 		_isDocReady = false,
 		/**
-		 * Whether all apps are locked
-		 * @type {Boolean}
+		 * How many locks are active in preventing
+		 * apps from starting
+		 * @type {Number}
 		 */
-		_isLocked = false;
+		_lockBarrier = 0;
 
 	// When document.ready trigger all registered apps to start
 	_document.ready(function() {
@@ -35,7 +36,7 @@
 	};
 
 	/**
-	 * Centralized start point for an application and 
+	 * Centralized start point for an application and
 	 * allows multiple, separate apps to run side-by-side.
 	 * Also reduces bindings to the DOM on window load/unload
 	 * and document ready.
@@ -49,25 +50,25 @@
 		 * @type {Object}
 		 */
 		this.config = {};
-		
+
 		/**
 		 * Holds the setup calls
 		 * @type {Array[Function]}
 		 */
 		this.setupCalls = [];
-		
+
 		/**
 		 * Holds the end call
 		 * @type {Function}
 		 */
 		this.endCall = null; // Only one end call
-		
+
 		/**
 		 * Holds the start call
 		 * @type {Function}
 		 */
 		this.startCall = null;
-		
+
 		/**
 		 * Track whether the app has been initialized.
 		 * Need to know so that an unload call is not executed
@@ -85,27 +86,27 @@
 		this._unload = _.once(_.bind(this._unload, this)); // Unload only once
 
 		this._bindAutoStart();
-		this._bindAutoEnd();		
+		this._bindAutoEnd();
 
 	}, {
 		_check: function() {
-			if (_isLocked) { return; }
+			if (_lockBarrier > 0) { return; }
 			if (this._isIgnited || _isDocReady) { this._initialize(); }
 		},
-		
+
 		/**
 		 * By default, the app will startup on document.ready
 		 * @type {Boolean}
 		 */
 		autoStart: true,
-		
+
 		/**
 		 * Bind the autostart events
 		 * @private
 		 */
 		_bindAutoStart: function() {
 			if (!this.autoStart) { return; }
-			
+
 			if (_isDocReady) {
 				return this._check();
 			}
@@ -118,7 +119,7 @@
 		 * @type {Boolean}
 		 */
 		autoEnd: true,
-		
+
 		/**
 		 * Bind the autoend events
 		 * @private
@@ -222,12 +223,12 @@
 			this.trigger('setup:after', this.config);
 
 			this.trigger('start:before', this.config);
-			
+
 			this._callStart();
-			
+
 			this.trigger('start:after', this.config);
 		},
-		
+
 		/**
 		 * Call all setup functions
 		 * Clear the setup functions after their
@@ -271,11 +272,11 @@
 	});
 
 	App.lock = function() {
-		_isLocked = true;
+		_lockBarrier++;
 	};
 
 	App.unlock = function() {
-		_isLocked = false;
+		_lockBarrier--;
 		_runChecks();
 	};
 
